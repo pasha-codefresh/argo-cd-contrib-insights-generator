@@ -24,6 +24,13 @@ The tool generates a pre-formatted Google document that includes:
 
 ## Usage
 
-1. **Run the tool** to gather the latest contribution statistics.
-2. **Generate the Google document** with structured, up-to-date metrics.
-3. **Share the document** in preparation for the next ArgoCD contribution experience meeting.
+1. **Build the application:**
+
+   ```bash
+   go build -o argo-cd-contrib-insights
+    ```
+2. **Run the application:**
+
+   ```bash
+   ./argo-cd-contrib-insights 
+    ```
