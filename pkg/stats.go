@@ -30,7 +30,7 @@ func (c *createdIssuesStatsGenerator) Generate() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	link := fmt.Sprintf("https://github.com/argoproj/argo-cd/issues?q=is%%3Aissue+is%%3Aopen+created%%%s..%s+", startDate, endDate)
+	link := fmt.Sprintf("https://github.com/argoproj/argo-cd/issues?q=is%%3Aissue+is%%3Aopen+created%%3A%s..%s+", startDate, endDate)
 	return fmt.Sprintf("Created Issues: %d open / %d closed", issuesCreated, issuesClosed), link, nil
 }
 
@@ -51,7 +51,7 @@ func (c *createdPRsStatsGenerator) Generate() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	link := fmt.Sprintf("https://github.com/argoproj/argo-cd/issues?q=is%%3Aissue+is%%3Aopen+created%%%s..%s+", startDate, endDate)
+	link := fmt.Sprintf("https://github.com/argoproj/argo-cd/issues?q=is%%3Apr+is%%3Aopen+created%%3A%s..%s+", startDate, endDate)
 	return fmt.Sprintf("Created PRs: %d open / %d closed", prsCreated, prsClosed), link, nil
 }
 
