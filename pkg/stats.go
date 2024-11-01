@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/types"
+	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/util"
 )
 
 type StatsGenerator interface {
@@ -21,8 +24,7 @@ func NewCreatedIssuesStatsGenerator() StatsGenerator {
 }
 
 func (c *createdIssuesStatsGenerator) Generate() (string, string, error) {
-	startDate := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
-	endDate := time.Now().Format("2006-01-02")
+	startDate, endDate := util.GetRangeForLastWeek()
 
 	issuesCreated, issuesClosed, err := c.github.GetCreatedAndClosedIssues(startDate, endDate)
 	if err != nil {
@@ -43,8 +45,7 @@ func NewCreatedPRsStatsGenerator() StatsGenerator {
 }
 
 func (c *createdPRsStatsGenerator) Generate() (string, string, error) {
-	startDate := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
-	endDate := time.Now().Format("2006-01-02")
+	startDate, endDate := util.GetRangeForLastWeek()
 
 	prsCreated, prsClosed, err := c.github.GetCreatedAndClosedPRs()
 	if err != nil {
@@ -94,18 +95,13 @@ func (c *topReviewersStatsGenerator) Generate() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	// Build in such format
-	// Argo CD: crenshaw-dev (22), ishitasequeira (20), pasha-codefresh(19), agaudreault (11), nitishfy (10), ratulbasak(9), todaywasawesome (7),
+
 	var sb strings.Builder
 	sb.WriteString("Argo CD: ")
-	for _, reviewer := range argocdreviewers {
-		sb.WriteString(fmt.Sprintf("%s (%d), ", reviewer.Username, reviewer.Total))
-	}
+	sb.WriteString(types.ContributorsToString(argocdreviewers))
 
 	sb.WriteString("\nArgo Rollouts: ")
-	for _, reviewer := range argorolloutsreviewers {
-		sb.WriteString(fmt.Sprintf("%s (%d), ", reviewer.Username, reviewer.Total))
-	}
+	sb.WriteString(types.ContributorsToString(argorolloutsreviewers))
 
 	link := "https://argo.devstats.cncf.io/d/29/pr-reviews-by-contributor?orgId=1&from=now-7d&to=now&var-period=d&var-repo_name=argoproj%2Fargo-cd"
 
@@ -131,18 +127,13 @@ func (c *topMergersStatsGenerator) Generate() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	// Build in such format
-	// Argo CD: crenshaw-dev (22), ishitasequeira (20), pasha-codefresh(19), agaudreault (11), nitishfy (10), ratulbasak(9), todaywasawesome (7),
+
 	var sb strings.Builder
 	sb.WriteString("Argo CD: ")
-	for _, reviewer := range argocdmergers {
-		sb.WriteString(fmt.Sprintf("%s (%d), ", reviewer.Username, reviewer.Total))
-	}
+	sb.WriteString(types.ContributorsToString(argocdmergers))
 
 	sb.WriteString("\nArgo Rollouts: ")
-	for _, reviewer := range argorolloutsmergers {
-		sb.WriteString(fmt.Sprintf("%s (%d), ", reviewer.Username, reviewer.Total))
-	}
+	sb.WriteString(types.ContributorsToString(argorolloutsmergers))
 
 	return sb.String(), "https://argo.devstats.cncf.io/d/75/prs-mergers-table?orgId=1&var-period_name=Last%20week&var-repogroup_name=All", nil
 }

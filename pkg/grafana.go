@@ -5,73 +5,32 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
-	"strconv"
-	"time"
+
+	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/types"
+	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/util"
 )
 
-// Data structure to match the JSON payload for the POST request
-type QueryPayload struct {
-	Queries []struct {
-		RefID      string `json:"refId"`
-		Datasource struct {
-			UID  string `json:"uid"`
-			Type string `json:"type"`
-		} `json:"datasource"`
-		RawSQL        string `json:"rawSql"`
-		Format        string `json:"format"`
-		DatasourceID  int    `json:"datasourceId"`
-		IntervalMs    int    `json:"intervalMs"`
-		MaxDataPoints int    `json:"maxDataPoints"`
-	} `json:"queries"`
-	Range struct {
-		From string `json:"from"`
-		To   string `json:"to"`
-		Raw  struct {
-			From string `json:"from"`
-			To   string `json:"to"`
-		} `json:"raw"`
-	} `json:"range"`
-	From string `json:"from"`
-	To   string `json:"to"`
-}
-
-// Data structure to parse response JSON
-type Response struct {
-	Results map[string]struct {
-		Frames []struct {
-			Schema struct {
-				Fields []struct {
-					Name string `json:"name"`
-				} `json:"fields"`
-			} `json:"schema"`
-			Data struct {
-				Values [][]interface{} `json:"values"`
-			} `json:"data"`
-		} `json:"frames"`
-	} `json:"results"`
-}
-
-// Contributor struct holds the username and total contributions
-type Contributor struct {
-	Username string
-	Total    int
-}
-
 type Grafana struct {
+	queryPayloadFactory              *types.QueryPayloadFactory
+	timeSeriesContributorsAggregator ContributorsAggregator
+	tableContributorsAggregator      ContributorsAggregator
 }
 
 func NewGrafana() *Grafana {
-	return &Grafana{}
+	return &Grafana{
+		queryPayloadFactory:              types.NewQueryPayloadFactory(),
+		timeSeriesContributorsAggregator: NewTimeSeriesContributorsAggregator(),
+		tableContributorsAggregator:      NewTableContributorsAggregator(),
+	}
 }
 
-func (g *Grafana) TopArgoCDReviewers() ([]Contributor, error) {
+func (g *Grafana) TopArgoCDReviewers() ([]types.Contributor, error) {
 
 	sql := "select\n  * \nfrom\n  suser_reviews\nwhere\n  $__timeFilter(time)\n  and period = 'd'\n  and series = 'rev_per_usrargoprojargocd'\norder by\n  time"
 
-	from := strconv.FormatInt(time.Now().AddDate(0, 0, -7).UnixMilli(), 10)
-	to := strconv.FormatInt(time.Now().UnixMilli(), 10)
+	from, to := util.GetRangeForLastWeekAsMilli()
 
-	payloadJSON, err := json.Marshal(buildPayload(sql, "time_series", from, to))
+	payloadJSON, err := json.Marshal(g.queryPayloadFactory.Create(sql, "time_series", from, to))
 	if err != nil {
 		return nil, err
 	}
@@ -84,12 +43,12 @@ func (g *Grafana) TopArgoCDReviewers() ([]Contributor, error) {
 	defer resp.Body.Close()
 
 	// Parse the response
-	var response Response
+	var response types.Response
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, err
 	}
 
-	contributors := aggregateContributions(response)
+	contributors := g.timeSeriesContributorsAggregator.aggregate(response)
 
 	if len(contributors) < 10 {
 		return contributors, nil
@@ -97,14 +56,13 @@ func (g *Grafana) TopArgoCDReviewers() ([]Contributor, error) {
 	return contributors[0:10], nil
 }
 
-func (g *Grafana) TopArgoRolloutsReviewers() ([]Contributor, error) {
+func (g *Grafana) TopArgoRolloutsReviewers() ([]types.Contributor, error) {
 
 	sql := "select\n  * \nfrom\n  suser_reviews\nwhere\n  $__timeFilter(time)\n  and period = 'd'\n  and series = 'rev_per_usrargoprojargorollouts'\norder by\n  time"
 
-	from := strconv.FormatInt(time.Now().AddDate(0, 0, -7).UnixMilli(), 10)
-	to := strconv.FormatInt(time.Now().UnixMilli(), 10)
+	from, to := util.GetRangeForLastWeekAsMilli()
 
-	payloadJSON, err := json.Marshal(buildPayload(sql, "time_series", from, to))
+	payloadJSON, err := json.Marshal(g.queryPayloadFactory.Create(sql, "time_series", from, to))
 	if err != nil {
 		return nil, err
 	}
@@ -117,24 +75,23 @@ func (g *Grafana) TopArgoRolloutsReviewers() ([]Contributor, error) {
 	defer resp.Body.Close()
 
 	// Parse the response
-	var response Response
+	var response types.Response
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, err
 	}
 
-	contributors := aggregateContributions(response)
+	contributors := g.timeSeriesContributorsAggregator.aggregate(response)
 
 	return contributors, nil
 }
 
-func (g *Grafana) TopArgoRolloutsMergers() ([]Contributor, error) {
+func (g *Grafana) TopArgoRolloutsMergers() ([]types.Contributor, error) {
 
 	sql := "select\n  row_number() over (order by value desc, name asc) as \"Rank\",\n  name,\n  value\nfrom\n  shpr_mergers\nwhere\n  series = 'hpr_mergersargoprojargorollouts'\n  and period = 'w'"
 
-	from := strconv.FormatInt(time.Now().AddDate(0, 0, -7).UnixMilli(), 10)
-	to := strconv.FormatInt(time.Now().UnixMilli(), 10)
+	from, to := util.GetRangeForLastWeekAsMilli()
 
-	payloadJSON, err := json.Marshal(buildPayload(sql, "table", from, to))
+	payloadJSON, err := json.Marshal(g.queryPayloadFactory.Create(sql, "table", from, to))
 	if err != nil {
 		return nil, err
 	}
@@ -147,24 +104,22 @@ func (g *Grafana) TopArgoRolloutsMergers() ([]Contributor, error) {
 	defer resp.Body.Close()
 
 	// Parse the response
-	var response Response
+	var response types.Response
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, err
 	}
 
-	contributors := processContributors(response)
+	contributors := g.tableContributorsAggregator.aggregate(response)
 
 	return contributors, nil
 }
 
-func (g *Grafana) TopArgoCDMergers() ([]Contributor, error) {
+func (g *Grafana) TopArgoCDMergers() ([]types.Contributor, error) {
 
 	sql := "select\n  row_number() over (order by value desc, name asc) as \"Rank\",\n  name,\n  value\nfrom\n  shpr_mergers\nwhere\n  series = 'hpr_mergersargocd'\n  and period = 'w'"
 
-	from := strconv.FormatInt(time.Now().AddDate(0, 0, -7).UnixMilli(), 10)
-	to := strconv.FormatInt(time.Now().UnixMilli(), 10)
-
-	payloadJSON, err := json.Marshal(buildPayload(sql, "table", from, to))
+	from, to := util.GetRangeForLastWeekAsMilli()
+	payloadJSON, err := json.Marshal(g.queryPayloadFactory.Create(sql, "table", from, to))
 	if err != nil {
 		return nil, err
 	}
@@ -177,56 +132,29 @@ func (g *Grafana) TopArgoCDMergers() ([]Contributor, error) {
 	defer resp.Body.Close()
 
 	// Parse the response
-	var response Response
+	var response types.Response
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, err
 	}
 
-	contributors := processContributors(response)
+	contributors := g.tableContributorsAggregator.aggregate(response)
 
 	return contributors, nil
 }
 
-func buildPayload(sql string, format string, from string, to string) QueryPayload {
-	// Payload for the POST request
-	payload := QueryPayload{
-		Queries: []struct {
-			RefID      string `json:"refId"`
-			Datasource struct {
-				UID  string `json:"uid"`
-				Type string `json:"type"`
-			} `json:"datasource"`
-			RawSQL        string `json:"rawSql"`
-			Format        string `json:"format"`
-			DatasourceID  int    `json:"datasourceId"`
-			IntervalMs    int    `json:"intervalMs"`
-			MaxDataPoints int    `json:"maxDataPoints"`
-		}{
-			{
-				RefID: "A",
-				Datasource: struct {
-					UID  string `json:"uid"`
-					Type string `json:"type"`
-				}{
-					UID:  "P172949F98CB31475",
-					Type: "postgres",
-				},
-				RawSQL:        sql,
-				Format:        format,
-				DatasourceID:  1,
-				IntervalMs:    3600000,
-				MaxDataPoints: 1622,
-			},
-		},
-		From: from,
-		To:   to,
-	}
+type ContributorsAggregator interface {
+	aggregate(data types.Response) []types.Contributor
+}
 
-	return payload
+type timeSeriesContributorsAggregator struct {
+}
+
+func NewTimeSeriesContributorsAggregator() ContributorsAggregator {
+	return &timeSeriesContributorsAggregator{}
 }
 
 // Aggregates and sorts contributors by total contributions
-func aggregateContributions(data Response) []Contributor {
+func (aggregator *timeSeriesContributorsAggregator) aggregate(data types.Response) []types.Contributor {
 	contribMap := make(map[string]float64)
 	for _, result := range data.Results {
 		for _, frame := range result.Frames {
@@ -246,10 +174,10 @@ func aggregateContributions(data Response) []Contributor {
 	}
 
 	// Convert map to sorted slice
-	contributors := make([]Contributor, 0, len(contribMap))
+	contributors := make([]types.Contributor, 0, len(contribMap))
 	for username, total := range contribMap {
 		if total > 0 {
-			contributors = append(contributors, Contributor{Username: username, Total: int(total)})
+			contributors = append(contributors, types.Contributor{Username: username, Total: int(total)})
 		}
 	}
 	sort.Slice(contributors, func(i, j int) bool {
@@ -259,8 +187,15 @@ func aggregateContributions(data Response) []Contributor {
 	return contributors
 }
 
-func processContributors(data Response) []Contributor {
-	var contributors []Contributor
+type tableContributorsAggregator struct {
+}
+
+func NewTableContributorsAggregator() ContributorsAggregator {
+	return &tableContributorsAggregator{}
+}
+
+func (aggregator *tableContributorsAggregator) aggregate(data types.Response) []types.Contributor {
+	var contributors []types.Contributor
 	for _, result := range data.Results {
 		for _, frame := range result.Frames {
 			nameField := 1
@@ -268,7 +203,7 @@ func processContributors(data Response) []Contributor {
 
 			// Loop over values and capture each contributor's name and total contributions
 			for i := 0; i < len(frame.Data.Values[nameField]); i++ {
-				contributors = append(contributors, Contributor{
+				contributors = append(contributors, types.Contributor{
 					Username: frame.Data.Values[nameField][i].(string),
 					Total:    int(frame.Data.Values[valueField][i].(float64)),
 				})
