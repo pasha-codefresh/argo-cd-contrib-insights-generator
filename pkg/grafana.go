@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
-	"strconv"
-	"time"
 
 	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/types"
 	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/util"
@@ -120,9 +118,7 @@ func (g *Grafana) TopArgoCDMergers() ([]types.Contributor, error) {
 
 	sql := "select\n  row_number() over (order by value desc, name asc) as \"Rank\",\n  name,\n  value\nfrom\n  shpr_mergers\nwhere\n  series = 'hpr_mergersargocd'\n  and period = 'w'"
 
-	from := strconv.FormatInt(time.Now().AddDate(0, 0, -7).UnixMilli(), 10)
-	to := strconv.FormatInt(time.Now().UnixMilli(), 10)
-
+	from, to := util.GetRangeForLastWeekAsMilli()
 	payloadJSON, err := json.Marshal(g.queryPayloadFactory.Create(sql, "table", from, to))
 	if err != nil {
 		return nil, err

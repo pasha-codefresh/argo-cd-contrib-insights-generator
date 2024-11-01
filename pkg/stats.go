@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/types"
+	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/util"
 )
 
 type StatsGenerator interface {
@@ -23,8 +24,7 @@ func NewCreatedIssuesStatsGenerator() StatsGenerator {
 }
 
 func (c *createdIssuesStatsGenerator) Generate() (string, string, error) {
-	startDate := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
-	endDate := time.Now().Format("2006-01-02")
+	startDate, endDate := util.GetRangeForLastWeek()
 
 	issuesCreated, issuesClosed, err := c.github.GetCreatedAndClosedIssues(startDate, endDate)
 	if err != nil {
@@ -45,8 +45,7 @@ func NewCreatedPRsStatsGenerator() StatsGenerator {
 }
 
 func (c *createdPRsStatsGenerator) Generate() (string, string, error) {
-	startDate := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
-	endDate := time.Now().Format("2006-01-02")
+	startDate, endDate := util.GetRangeForLastWeek()
 
 	prsCreated, prsClosed, err := c.github.GetCreatedAndClosedPRs()
 	if err != nil {

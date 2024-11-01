@@ -3,9 +3,9 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/go-github/v50/github"
+	"github.com/pasha-codefresh/argo-cd-contrib-insights-generator/pkg/util"
 )
 
 const (
@@ -37,8 +37,7 @@ func (g *Github) GetCreatedAndClosedIssues(startDate, endDate string) (int, int,
 
 func (g *Github) GetCreatedAndClosedPRs() (int, int, error) {
 	client := github.NewClient(nil) // No auth client for public repos
-	startDate := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
-	endDate := time.Now().Format("2006-01-02")
+	startDate, endDate := util.GetRangeForLastWeek()
 	issuesCreatedQuery := fmt.Sprintf("repo:%s/%s is:pr is:open created:%s..%s", owner, repo, startDate, endDate)
 	issuesCreated, err := executeSearchQuery(context.Background(), client, issuesCreatedQuery)
 	if err != nil {
