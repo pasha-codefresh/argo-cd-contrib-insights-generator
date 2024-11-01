@@ -20,6 +20,8 @@ The tool generates a pre-formatted Google document that includes:
 - Stale Issues
 - Top Reviewers and Mergers (by project)
 
+![Example](assets/example.png)
+
 ## Usage
 
 1. **Run the tool** to gather the latest contribution statistics.
