@@ -13,48 +13,53 @@ var rootCmd = &cobra.Command{
 	Short: "Generate Argo CD contrib meeting insights",
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		fmt.Println(" - Argo CD:")
-		createdIssuesStats, link, err := pkg.NewCreatedIssuesStatsGenerator().Generate()
-		if err != nil {
+		fmt.Println("- **Weekly GitHub Stats** (Extracted with [insight-generator](https://github.com/crenshaw-dev/argo-cd-contrib-insights-generator))")
+		if err := printProjectStats("Argo CD", pkg.ArgoCDRepo); err != nil {
 			return err
 		}
-		fmt.Println(createdIssuesStats)
-		fmt.Println(link)
-
-		createdPRsStats, link, err := pkg.NewCreatedPRsStatsGenerator().Generate()
-		if err != nil {
+		if err := printProjectStats("Argo Rollouts", pkg.ArgoRolloutsRepo); err != nil {
 			return err
 		}
-		fmt.Println(createdPRsStats)
-		fmt.Println(link)
 
-		staleIssuesStats, link, err := pkg.NewStaleIssuesStatsGenerator().Generate()
-		if err != nil {
-			return err
-		}
-		fmt.Println(staleIssuesStats)
-		fmt.Println(link)
+		fmt.Print("- **Weekly LFX Insights Stats**\n")
 
-		fmt.Println(" - Top Reviewers:")
-
-		topReviewersStats, link, err := pkg.NewTopReviewersStatsGenerator().Generate()
+		topReviewersStats, err := pkg.NewTopReviewersStatsGenerator().Generate()
 		if err != nil {
 			return err
 		}
 		fmt.Println(topReviewersStats)
-		fmt.Println(link)
 
-		fmt.Println(" - Top Mergers:")
-
-		topMergersStats, link, err := pkg.NewTopMergersStatsGenerator().Generate()
+		topMergersStats, err := pkg.NewTopMergersStatsGenerator().Generate()
 		if err != nil {
 			return err
 		}
 		fmt.Println(topMergersStats)
-		fmt.Println(link)
 
 		return nil
 	},
+}
+
+func printProjectStats(name, repo string) error {
+	fmt.Printf("  - **%s:**\n", name)
+
+	createdIssuesStats, err := pkg.NewCreatedIssuesStatsGenerator(repo).Generate()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("    - %s\n", createdIssuesStats)
+
+	createdPRsStats, err := pkg.NewCreatedPRsStatsGenerator(repo).Generate()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("    - %s\n", createdPRsStats)
+
+	staleIssuesStats, err := pkg.NewStaleIssuesStatsGenerator(repo).Generate()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("    - %s\n", staleIssuesStats)
+	return nil
 }
 
 func Execute() {

@@ -25,3 +25,6 @@ go.work.sum
 .env
 
 .idea
+
+# Binary built according to README.md
+argo-cd-contrib-insights
