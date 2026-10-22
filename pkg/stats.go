@@ -17,9 +17,9 @@ type createdIssuesStatsGenerator struct {
 	github *Github
 }
 
-func NewCreatedIssuesStatsGenerator() StatsGenerator {
+func NewCreatedIssuesStatsGenerator(repo string) StatsGenerator {
 	return &createdIssuesStatsGenerator{
-		github: NewGithub(),
+		github: NewGithub(repo),
 	}
 }
 
@@ -30,7 +30,7 @@ func (c *createdIssuesStatsGenerator) Generate() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	link := fmt.Sprintf("https://github.com/argoproj/argo-cd/issues?q=is%%3Aissue+is%%3Aopen+created%%3A%s..%s+", startDate, endDate)
+	link := fmt.Sprintf("https://github.com/%s/issues?q=is%%3Aissue+is%%3Aopen+created%%3A%s..%s+", c.github.Repo(), startDate, endDate)
 	return fmt.Sprintf("Created Issues: %d open / %d closed", issuesCreated, issuesClosed), link, nil
 }
 
@@ -38,9 +38,9 @@ type createdPRsStatsGenerator struct {
 	github *Github
 }
 
-func NewCreatedPRsStatsGenerator() StatsGenerator {
+func NewCreatedPRsStatsGenerator(repo string) StatsGenerator {
 	return &createdPRsStatsGenerator{
-		github: NewGithub(),
+		github: NewGithub(repo),
 	}
 }
 
@@ -51,7 +51,7 @@ func (c *createdPRsStatsGenerator) Generate() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	link := fmt.Sprintf("https://github.com/argoproj/argo-cd/issues?q=is%%3Apr+is%%3Aopen+created%%3A%s..%s+", startDate, endDate)
+	link := fmt.Sprintf("https://github.com/%s/issues?q=is%%3Apr+is%%3Aopen+created%%3A%s..%s+", c.github.Repo(), startDate, endDate)
 	return fmt.Sprintf("Created PRs: %d open / %d closed", prsCreated, prsClosed), link, nil
 }
 
@@ -59,9 +59,9 @@ type staleIssuesStatsGenerator struct {
 	github *Github
 }
 
-func NewStaleIssuesStatsGenerator() StatsGenerator {
+func NewStaleIssuesStatsGenerator(repo string) StatsGenerator {
 	return &staleIssuesStatsGenerator{
-		github: NewGithub(),
+		github: NewGithub(repo),
 	}
 }
 
@@ -71,7 +71,7 @@ func (c *staleIssuesStatsGenerator) Generate() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	link := fmt.Sprintf("https://github.com/argoproj/argo-cd/issues?q=is%%3Aissue+is%%3Aopen+updated%%3A%%3C%s+", startDate)
+	link := fmt.Sprintf("https://github.com/%s/issues?q=is%%3Aissue+is%%3Aopen+updated%%3A%%3C%s+", c.github.Repo(), startDate)
 	return fmt.Sprintf("Stale Issues: %d", staleIssues), link, nil
 }
 

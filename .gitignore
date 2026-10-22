@@ -25,3 +25,6 @@ go.work.sum
 .env
 
 .idea
+
+# Build output
+/argo-cd-contrib-insights-generator

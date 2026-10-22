@@ -32,5 +32,11 @@ The tool generates a pre-formatted Google document that includes:
 2. **Run the application:**
 
    ```bash
-   ./argo-cd-contrib-insights 
+   ./argo-cd-contrib-insights
+    ```
+
+   Issue and PR stats default to `argoproj/argo-cd`. Use `--repo` to target another repository:
+
+   ```bash
+   ./argo-cd-contrib-insights --repo argoproj/argo-rollouts
     ```
